@@ -1,0 +1,2 @@
+ConfigArgParse~=1.5.3
+pydantic~=1.8.2
