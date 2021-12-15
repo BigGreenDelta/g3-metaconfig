@@ -1,36 +1,17 @@
 import logging
+import sys
 from abc import ABCMeta
-from typing import Any, Dict, Type, Set, Optional, List
+from typing import Any, Dict, Type, Set, Optional, List, Union
 
 import configargparse as configargparse
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel
 
-__ALL__ = ["G3ConfigMeta", "Config", "ArgParserConfig"]
-
+from .configs import Config, ArgParserConfig, SIMPLE_TYPES
 from .param import Param
 
+__ALL__ = ["G3ConfigMeta"]
+
 log = logging.getLogger("g3-config")
-
-
-class Config(BaseModel, extra=Extra.forbid):
-    """ Config class for G3ConfigMeta metaclass"""
-    env_prefix: Optional[str] = None
-    """ Specify it to automatically enable getting of all your class variables from environment variables."""
-
-
-class ArgParserConfig(BaseModel, extra=Extra.allow):
-    """ ArgParserConfig class that directly process almost all it's fields
-    to parser_class's ArgParser arguments at its creation."""
-
-    parser_class: Optional[Type] = None
-    add_help: Optional[bool] = None
-    description: Optional[str] = None
-
-    __service_args_ArgParserConfig__ = {"parse_known_args"}
-    parse_known_args: bool = True
-    """Used to specify parse function
-    True: parse_known_args
-    False: parse_args"""
 
 
 class ClassData(BaseModel, arbitrary_types_allowed=True):
@@ -45,8 +26,8 @@ class ClassData(BaseModel, arbitrary_types_allowed=True):
 
     instance: Any = None
 
-    parser: configargparse.ArgParser = None
-    argparser_config: Optional[ArgParserConfig] = None
+    arg_parser_config: Optional[ArgParserConfig] = None
+    parser: Union[configargparse.ArgParser, Any] = None
 
 
 class G3ConfigMeta(ABCMeta):
@@ -85,7 +66,7 @@ class G3ConfigMeta(ABCMeta):
             annotations=namespace.get("__annotations__", []),
             fields_values=cls._get_class_fields(cls, [Config.__name__, ArgParserConfig.__name__]),
             kwargs=kwargs,
-            argparser_config=cls._get_config_inst(ArgParserConfig, namespace))
+            arg_parser_config=cls._get_config_inst(ArgParserConfig, namespace))
 
         return cls._classes[cls]
 
@@ -100,10 +81,10 @@ class G3ConfigMeta(ABCMeta):
     @staticmethod
     def _parse_args(data: ClassData):
         parser_configs = dict()
-        if data.argparser_config is not None:
-            parser_configs = data.argparser_config.dict(exclude_none=True,
-                                                        exclude=ArgParserConfig.__service_args_ArgParserConfig__)
-        data.parser = configargparse.ArgParser(**parser_configs)
+        if data.arg_parser_config is not None:
+            parser_configs = data.arg_parser_config.dict(exclude_none=True,
+                                                         exclude=ArgParserConfig.__service_args_ArgParserConfig__)
+        data.parser = data.arg_parser_config.argument_parser_class(**parser_configs)
 
         for name, value in data.fields_values.items():
             param: Param
@@ -114,21 +95,37 @@ class G3ConfigMeta(ABCMeta):
                 if value is not None:
                     param.default = value
 
+                    if data.config.auto_typing:
+                        param_type = type(value)
+                        if param_type in SIMPLE_TYPES:
+                            param.type = param_type
+
             if not param.dest:
                 param.dest = name
 
             if not param.args:
                 param.args = [f"--{name.lower()}"]
 
+            if all([data.config.auto_typing, param.type is None, name in data.annotations]):
+                if data.annotations[name] in SIMPLE_TYPES:
+                    param.type = data.annotations[name]
+
             if all([data.config is not None, data.config.env_prefix is not None, param.env_var is None]):
                 param.env_var = f"{data.config.env_prefix}{name}".upper()
 
+            log.debug(f"{name} ({type(value).__name__}): {param.args} {param.dict(exclude={'args'}, exclude_unset=True)}")
+
             data.parser.add_argument(*param.args, **param.dict(exclude={"args"}, exclude_unset=True))
 
-        if data.argparser_config.parse_known_args:
+        log.debug(f"{sys.argv=}")
+
+        if data.arg_parser_config.parse_known_args:
             args, other = data.parser.parse_known_args()
+            log.debug(f"{args=}")
+            log.debug(f"{other=}")
         else:
             args = data.parser.parse_args()
+            log.debug(f"{args=}")
 
         args: configargparse.Namespace
         for name, value in args.__dict__.items():
