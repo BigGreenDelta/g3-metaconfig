@@ -7,8 +7,8 @@ with open("requirements.txt", "r", encoding="utf-8") as f:
     install_reqs = f.read().splitlines()
 
 setuptools.setup(
-    name="g3-config",
-    version="0.1.0",
+    name="g3-metaconfig",
+    version="1.0.0",
     author="Kirill Potapenko",
     author_email="ajiadb9@bgd.team",
     description="Simple metaclass to simplify work with argparse",
@@ -23,6 +23,6 @@ setuptools.setup(
         "Development Status :: 3 - Alpha",
     ],
     install_requires=install_reqs,
-    packages=["g3_config", "g3_config.tests"],
+    packages=["g3_metaconfig", "g3_metaconfig.tests"],
     python_requires=">=3.8",
 )

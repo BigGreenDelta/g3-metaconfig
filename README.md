@@ -1,3 +1,3 @@
-# G3 Config
+# G3 metaconfig
 
-Simple metaclass to simplify work with argparse
+Metaclass to simplify work with argparse and it's forks

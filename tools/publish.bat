@@ -1,5 +1,5 @@
 pushd "%~dp0../"
 
-py -3.8 -m twine upload --repository testpypi --skip-existing -u=__token__ dist/*
+py -3.8 -m twine upload --repository pypi --skip-existing --config-file=Tools/.pypirc dist/*
 
 popd

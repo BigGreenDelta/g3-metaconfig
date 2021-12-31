@@ -4,7 +4,7 @@ import unittest
 
 import configargparse
 
-from g3_config import G3ConfigMeta, Param
+from g3_metaconfig import G3ConfigMeta, Param
 
 log = logging.getLogger(__name__)
 
