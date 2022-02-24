@@ -3,8 +3,6 @@ from typing import Optional, Type
 import configargparse
 from pydantic import BaseModel, Extra
 
-SIMPLE_TYPES = [bool, str, int, float, list, dict, tuple]
-
 
 class Config(BaseModel, extra=Extra.forbid):
     """ Config class for G3ConfigMeta metaclass."""
@@ -15,6 +13,9 @@ class Config(BaseModel, extra=Extra.forbid):
     env_prefix: Optional[str] = None
     """ Specify it to automatically enable getting of all your class variables from environment variables.
     This prefix is used only if you didn't specify `env_var` parameter in `Param`."""
+
+    auto_replace_underscores_with_dashes: bool = True
+    """ Automatically replace underscores with dashes in CLI argument names."""
 
 
 class ArgParserConfig(BaseModel, extra=Extra.allow):

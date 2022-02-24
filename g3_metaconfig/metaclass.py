@@ -20,7 +20,7 @@ class ClassData(BaseModel, arbitrary_types_allowed=True):
     actual_class: Type = None
     name: str = None
     bases: Set[Type] = list()
-    annotations: Dict[str, Type] = dict()
+    annotations: Dict[str, Any] = dict()
     fields_values: Dict[str, Any] = dict()
     kwargs: Dict[str, Any] = None
 
@@ -36,7 +36,7 @@ class G3ConfigMeta(ABCMeta):
     def __call__(cls, *args, **kwargs):
         return cls._classes[cls].instance
 
-    def __new__(mcs, name, bases, namespace, **kwargs):
+    def __new__(mcs, name, bases, namespace, **kwargs) -> type:
         log.debug(f"__new__: {name=}")
         log.debug(f"__new__: {bases=}")
         log.debug(f"__new__: {namespace=}")
@@ -63,10 +63,11 @@ class G3ConfigMeta(ABCMeta):
             instance=super(G3ConfigMeta, cls).__call__(),
             name=name,
             bases=bases,
-            annotations=namespace.get("__annotations__", []),
+            annotations=namespace.get("__annotations__", {}),
             fields_values=cls._get_class_fields(cls, [Config.__name__, ArgParserConfig.__name__]),
             kwargs=kwargs,
-            arg_parser_config=cls._get_config_inst(ArgParserConfig, namespace))
+            arg_parser_config=cls._get_config_inst(ArgParserConfig, namespace),
+        )
 
         return cls._classes[cls]
 
@@ -82,8 +83,10 @@ class G3ConfigMeta(ABCMeta):
     def _parse_args(data: ClassData):
         parser_configs = dict()
         if data.arg_parser_config is not None:
-            parser_configs = data.arg_parser_config.dict(exclude_none=True,
-                                                         exclude=ArgParserConfig.__service_args_ArgParserConfig__)
+            parser_configs = data.arg_parser_config.dict(
+                exclude_none=True,
+                exclude=ArgParserConfig.__service_args_ArgParserConfig__,
+            )
         data.parser = data.arg_parser_config.argument_parser_class(**parser_configs)
 
         for name, value in data.fields_values.items():
@@ -104,16 +107,22 @@ class G3ConfigMeta(ABCMeta):
                 param.dest = name
 
             if not param.args:
-                param.args = [f"--{name.lower()}"]
+                cli_name = name.lower()
+                if data.config.auto_replace_underscores_with_dashes:
+                    cli_name = cli_name.replace('_', '-')
+                param.args = [f"--{cli_name}"]
 
             if all([data.config.auto_typing, param.type is None, name in data.annotations]):
-                if data.annotations[name] in SIMPLE_TYPES:
+                if isinstance(data.annotations[name], type):
                     param.type = data.annotations[name]
 
-            if all([data.config is not None, data.config.env_prefix is not None, param.env_var is None]):
+            if all([data.config is not None, data.config.env_prefix is not None, param.env_var is None, ]):
                 param.env_var = f"{data.config.env_prefix}{name}".upper()
 
-            log.debug(f"{name} ({type(value).__name__}): {param.args} {param.dict(exclude={'args'}, exclude_unset=True)}")
+            log.debug(
+                f"{name} ({type(value).__name__}): "
+                f"{param.args} {param.dict(exclude={'args'}, exclude_unset=True)}"
+            )
 
             data.parser.add_argument(*param.args, **param.dict(exclude={"args"}, exclude_unset=True))
 

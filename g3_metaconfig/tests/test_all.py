@@ -1,6 +1,7 @@
 import logging
 import sys
 import unittest
+from typing import Optional, Dict
 
 import configargparse
 
@@ -8,7 +9,14 @@ from g3_metaconfig import G3ConfigMeta, Param
 
 log = logging.getLogger(__name__)
 
-sys.argv = [*sys.argv, "--count=55", "--count2=99", "--count3=333", "--number=999.0", "--text=test_text"]
+sys.argv = [
+    *sys.argv,
+    "--count=55",
+    "--count2=99",
+    "--count3=333",
+    "--number=999.0",
+    "--text=test_text",
+]
 
 
 class G3Config(metaclass=G3ConfigMeta):
@@ -27,6 +35,9 @@ class G3Config(metaclass=G3ConfigMeta):
     text: str = None
     number: float = 3.52
     array: list = ["asdsssssss"]
+    optional_unset: Optional[str] = None
+    optional_with_value: Optional[str] = "asdsssssss"
+    other_types: Dict[str, str] = None
 
 
 class MyConfigs(metaclass=G3ConfigMeta):
@@ -71,6 +82,18 @@ class DefaultTestCases(unittest.TestCase):
         self.assertEqual(G3Config.array, ["asdsssssss"])
         self.assertEqual(G3Config().array, ["asdsssssss"])
 
+        log.debug(f"{G3Config.optional_unset=} {G3Config().optional_unset=}")
+        self.assertEqual(G3Config.optional_unset, None)
+        self.assertEqual(G3Config().optional_unset, None)
 
-if __name__ == '__main__':
+        log.debug(f"{G3Config.optional_with_value=} {G3Config().optional_with_value=}")
+        self.assertEqual(G3Config.optional_with_value, "asdsssssss")
+        self.assertEqual(G3Config().optional_with_value, "asdsssssss")
+
+        log.debug(f"{G3Config.other_types=} {G3Config().other_types=}")
+        self.assertEqual(G3Config.other_types, None)
+        self.assertEqual(G3Config().other_types, None)
+
+
+if __name__ == "__main__":
     unittest.main()
