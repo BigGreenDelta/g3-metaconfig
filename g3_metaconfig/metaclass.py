@@ -6,7 +6,7 @@ from typing import Any, Dict, Type, Set, Optional, List, Union
 import configargparse as configargparse
 from pydantic import BaseModel
 
-from .configs import Config, ArgParserConfig, SIMPLE_TYPES
+from .configs import Config, ArgParserConfig
 from .param import Param
 
 __ALL__ = ["G3ConfigMeta"]
@@ -100,7 +100,7 @@ class G3ConfigMeta(ABCMeta):
 
                     if data.config.auto_typing:
                         param_type = type(value)
-                        if param_type in SIMPLE_TYPES:
+                        if isinstance(param_type, type):
                             param.type = param_type
 
             if not param.dest:

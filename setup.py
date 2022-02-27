@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as reqs_file:
 
 setuptools.setup(
     name="g3-metaconfig",
-    version="1.1.0",
+    version="1.1.1",
     author="Kirill Potapenko",
     author_email="ajiadb9@bgd.team",
     description="Simple metaclass to simplify work with argparse",

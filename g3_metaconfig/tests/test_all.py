@@ -1,7 +1,7 @@
 import logging
 import sys
 import unittest
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 import configargparse
 
@@ -19,6 +19,13 @@ sys.argv = [
 ]
 
 
+def int_or_none(value: Any):
+    try:
+        return int(value)
+    except BaseException:
+        return None
+
+
 class G3Config(metaclass=G3ConfigMeta):
     class Config:
         env_prefix = "G3_"
@@ -31,6 +38,7 @@ class G3Config(metaclass=G3ConfigMeta):
     count: int = Param("--count", help="Help yuorself", default=33)
     count2: int = Param()
     count3: int = Param(default=100)
+    count4: int = Param(type=int_or_none, default="asdf")
     condition: bool = Param("-c", "--cond", env_var="TEST_COND")
     text: str = None
     number: float = 3.52
@@ -65,6 +73,10 @@ class DefaultTestCases(unittest.TestCase):
         log.debug(f"{G3Config.count3=} {G3Config().count3=}")
         self.assertEqual(G3Config.count3, 333)
         self.assertEqual(G3Config().count3, 333)
+
+        log.debug(f"{G3Config.count4=} {G3Config().count4=}")
+        self.assertEqual(G3Config.count4, None)
+        self.assertEqual(G3Config().count4, None)
 
         log.debug(f"{G3Config.condition=} {G3Config().condition=}")
         self.assertEqual(G3Config.condition, None)
