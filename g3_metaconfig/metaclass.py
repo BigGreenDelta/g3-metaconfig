@@ -90,6 +90,8 @@ class G3ConfigMeta(ABCMeta):
         data.parser = data.arg_parser_config.argument_parser_class(**parser_configs)
 
         for name, value in data.fields_values.items():
+            auto_typing = data.config.auto_typing
+
             param: Param
             if isinstance(value, Param):
                 param = value
@@ -98,7 +100,7 @@ class G3ConfigMeta(ABCMeta):
                 if value is not None:
                     param.default = value
 
-                    if data.config.auto_typing:
+                    if auto_typing:
                         param_type = type(value)
                         if isinstance(param_type, type):
                             param.type = param_type
@@ -112,7 +114,23 @@ class G3ConfigMeta(ABCMeta):
                     cli_name = cli_name.replace('_', '-')
                 param.args = [f"--{cli_name}"]
 
-            if all([data.config.auto_typing, param.type is None, name in data.annotations]):
+            # Checking auto_typing compatibility with selected action
+            if auto_typing and param.action is not None:
+                try:
+                    action_class = data.parser._registry_get("action", param.action, param.action)
+                    action_class(
+                        option_strings=param.args,
+                        type="test",
+                        **param.dict(exclude={"args", "action"}, exclude_unset=True),
+                    )
+                except TypeError as e:
+                    auto_typing = False
+                    log.debug(
+                        f"Param '{name}' has action={param.action} "
+                        f"which leads to disabling Config.auto_typing for this variable"
+                    )
+
+            if all([auto_typing, param.type is None, name in data.annotations]):
                 if isinstance(data.annotations[name], type):
                     param.type = data.annotations[name]
 

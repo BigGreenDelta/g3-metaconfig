@@ -37,12 +37,18 @@ class G3Config(metaclass=G3ConfigMeta):
 
     count: int = Param("--count", help="Help yuorself", default=33)
     count2: int = Param()
-    count3: int = Param(default=100)
+    count3: int = Param(default=100, action="store")
     count4: int = Param(type=int_or_none, default="asdf")
+
     condition: bool = Param("-c", "--cond", env_var="TEST_COND")
+    condition2: bool = Param(action="store_true")
+
     text: str = None
+
     number: float = 3.52
+
     array: list = ["asdsssssss"]
+
     optional_unset: Optional[str] = None
     optional_with_value: Optional[str] = "asdsssssss"
     other_types: Dict[str, str] = None
