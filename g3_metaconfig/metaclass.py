@@ -90,52 +90,24 @@ class G3ConfigMeta(ABCMeta):
         data.parser = data.arg_parser_config.argument_parser_class(**parser_configs)
 
         for name, value in data.fields_values.items():
-            auto_typing = data.config.auto_typing
-
             param: Param
             if isinstance(value, Param):
                 param = value
+                param.set_name(name)
             else:
-                param = Param()
+                init_kwargs = {"name": name}
                 if value is not None:
-                    param.default = value
+                    init_kwargs["default"] = value
+                    if data.config.auto_typing:
+                        value_type = type(value)
+                        if isinstance(value_type, type):
+                            init_kwargs["type"] = value_type
+                param = Param(**init_kwargs)
 
-                    if auto_typing:
-                        param_type = type(value)
-                        if isinstance(param_type, type):
-                            param.type = param_type
-
-            if not param.dest:
-                param.dest = name
-
-            if not param.args:
-                cli_name = name.lower()
-                if data.config.auto_replace_underscores_with_dashes:
-                    cli_name = cli_name.replace('_', '-')
-                param.args = [f"--{cli_name}"]
-
-            # Checking auto_typing compatibility with selected action
-            if auto_typing and param.action is not None:
-                try:
-                    action_class = data.parser._registry_get("action", param.action, param.action)
-                    action_class(
-                        option_strings=param.args,
-                        type="test",
-                        **param.dict(exclude={"args", "action"}, exclude_unset=True),
-                    )
-                except TypeError as e:
-                    auto_typing = False
-                    log.debug(
-                        f"Param '{name}' has action={param.action} "
-                        f"which leads to disabling Config.auto_typing for this variable"
-                    )
-
-            if all([auto_typing, param.type is None, name in data.annotations]):
-                if isinstance(data.annotations[name], type):
-                    param.type = data.annotations[name]
-
-            if all([data.config is not None, data.config.env_prefix is not None, param.env_var is None, ]):
-                param.env_var = f"{data.config.env_prefix}{name}".upper()
+            param.set_dest()
+            param.set_args(data.config.auto_replace_underscores_with_dashes)
+            param.set_type(data.config.auto_typing, data.annotations.get(name, None), data.parser)
+            param.set_env(data.config.env_prefix)
 
             log.debug(
                 f"{name} ({type(value).__name__}): "
